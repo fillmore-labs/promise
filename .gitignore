@@ -1,0 +1,16 @@
+.*
+!/.buildkite/
+!/.codeclimate.yml
+!/.envrc
+!/.gitattributes
+!/.github/
+!/.gitignore
+!/.golangci.yaml
+!/.markdownlint.json
+!/.mockery.yaml
+!/.yamlfmt
+!/.yamllint
+/bin/
+/cover.out
+/test.xml
+/trace.out

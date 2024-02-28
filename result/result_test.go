@@ -29,7 +29,7 @@ var errTest = errors.New("test error")
 func TestV(t *testing.T) {
 	t.Parallel()
 	// given
-	r := result.Of(1, nil)
+	r := result.OfValue(1)
 	// when
 	v, err := r.V()
 	// then
@@ -41,9 +41,33 @@ func TestV(t *testing.T) {
 func TestVErr(t *testing.T) {
 	t.Parallel()
 	// given
-	r := result.Of(0, errTest)
+	r := result.OfError[struct{}](errTest)
 	// when
 	_, err := r.V()
+	// then
+	assert.ErrorIs(t, err, errTest)
+}
+
+func TestOf(t *testing.T) {
+	t.Parallel()
+	// given
+	r := result.Of(1, nil)
+	// when
+	v := r.Value()
+	err := r.Err()
+	// then
+	if assert.NoError(t, err) {
+		assert.Equal(t, 1, v)
+	}
+}
+
+func TestOfErr(t *testing.T) {
+	t.Parallel()
+	// given
+	r := result.Of(1, errTest)
+	// when
+	_ = r.Value() // doesn't panic
+	err := r.Err()
 	// then
 	assert.ErrorIs(t, err, errTest)
 }

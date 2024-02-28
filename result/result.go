@@ -19,10 +19,14 @@ package result
 // Result defines the interface for returning results from asynchronous operations.
 // It encapsulates the final value or error from the operation.
 type Result[R any] interface {
+	AnyResult
 	V() (R, error) // The V method returns the final value or an error.
 	Value() R      // The Value method returns the final value.
 	Err() error    // The Err method returns the error.
+}
 
+// AnyResult can be used with any [Result].
+type AnyResult interface {
 	Any() Result[any] // The Any method returns a Result[any] that can be used with any type.
 }
 
@@ -65,7 +69,7 @@ func (v valueResult[_]) Err() error {
 	return nil
 }
 
-// AnyResult returns the valueResult as a Result[any].
+// Any returns the valueResult as a Result[any].
 func (v valueResult[_]) Any() Result[any] {
 	return valueResult[any]{value: v.value}
 }
@@ -90,7 +94,7 @@ func (e errorResult[_]) Err() error {
 	return e.err
 }
 
-// AnyResult returns the errorResult as a Result[any].
+// Any returns the errorResult as a Result[any].
 func (e errorResult[_]) Any() Result[any] {
 	return errorResult[any](e)
 }

@@ -13,3 +13,6 @@ exclude_patterns:
   - "go.sum"
   - "LICENSE"
   - "nocopy.go"
+engines:
+  golangci:
+    enabled: true

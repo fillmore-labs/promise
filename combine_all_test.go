@@ -42,16 +42,15 @@ func TestAll(t *testing.T) {
 	}
 
 	for i, v := range values {
-		value, err := v.value, v.err
-		go promises[i].Do(func() (int, error) { return value, err })
+		promises[i].Do(func() (int, error) { return v.value, v.err })
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// when
-	var results [3]result.Result[int]
-	for i, r := range futures.All(ctx) { //nolint:typecheck
+	results := make([]result.Result[int], len(futures))
+	for i, r := range promise.AwaitAll(ctx, futures...) { //nolint:typecheck
 		results[i] = r
 	}
 
@@ -74,13 +73,50 @@ func TestAllEmpty(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var futures promise.List[int]
-
 	// when
-	allFutures := futures.All(ctx)
+	allFutures := promise.AwaitAllResults[int](ctx)
 
 	// then
+	assert.Zero(t, len(allFutures))
 	for _, v := range allFutures { //nolint:typecheck
 		t.Errorf("Invalid value %v", v)
+	}
+}
+
+func TestAnyAll(t *testing.T) {
+	t.Parallel()
+
+	// given
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	p1, f1 := promise.New[int]()
+	p2, f2 := promise.New[string]()
+	p3, f3 := promise.New[struct{}]()
+
+	p1.Resolve(1)
+	p2.Resolve("test")
+	p3.Resolve(struct{}{})
+
+	// when
+	results := make([]result.Result[any], 3)
+	for i, r := range promise.AwaitAllAny(ctx, f1, f2, f3) { //nolint:typecheck
+		results[i] = r
+	}
+
+	// then
+	for i, r := range results {
+		if assert.NoError(t, r.Err()) {
+			switch i {
+			case 0:
+				assert.Equal(t, 1, r.Value())
+			case 1:
+				assert.Equal(t, "test", r.Value())
+			case 2:
+				assert.Equal(t, struct{}{}, r.Value())
+			default:
+				assert.Fail(t, "unexpected index")
+			}
+		}
 	}
 }

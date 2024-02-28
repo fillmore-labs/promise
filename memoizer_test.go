@@ -129,12 +129,12 @@ func TestMemoizerCancel(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	f2 := promise.NewAsync(fn2)
 
-	cancel1()
-	_, err1 := f1.Await(ctx)
-	_, err2 := f2.Try()
-
 	cancel2()
-	_, err3 := f2.Await(ctx)
+	_, err1 := f2.Await(ctx)
+	_, err2 := f1.Try()
+
+	cancel1()
+	_, err3 := f1.Await(ctx)
 
 	// then
 	assert.ErrorIs(t, err1, context.Canceled)
@@ -147,12 +147,11 @@ func TestMemoizerClosed(t *testing.T) {
 
 	// given
 	p, f := promise.New[int]()
+	close(p)
+
 	m := f.Memoize()
 
 	ctx := context.Background()
-
-	p.Resolve(1)
-	_, _ = f.Await(ctx)
 
 	// when
 	_, err := m.Await(ctx)
@@ -166,12 +165,31 @@ func TestMemoizerTryClosed(t *testing.T) {
 
 	// given
 	p, f := promise.New[int]()
+	close(p)
+
 	m := f.Memoize()
 
 	ctx := context.Background()
 
-	p.Resolve(1)
-	_, _ = f.Await(ctx)
+	// when
+	_, err1 := m.Try()
+	_, err2 := m.Await(ctx)
+
+	// then
+	assert.ErrorIs(t, err1, promise.ErrNoResult)
+	assert.ErrorIs(t, err2, promise.ErrNoResult)
+}
+
+func TestMemoizerNil(t *testing.T) {
+	t.Parallel()
+
+	// given
+	p, f := promise.New[int]()
+	p <- nil
+
+	m := f.Memoize()
+
+	ctx := context.Background()
 
 	// when
 	_, err1 := m.Try()

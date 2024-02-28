@@ -25,8 +25,7 @@ import (
 
 // A Memoizer is created with [Future.Memoize] and contains a memoized result of a future.
 type Memoizer[R any] struct {
-	_ noCopy
-
+	_      noCopy
 	wait   chan struct{}
 	value  result.Result[R]
 	future Future[R]
@@ -59,7 +58,7 @@ func (m *Memoizer[R]) Await(ctx context.Context) (R, error) {
 
 	select {
 	case v, ok := <-m.future:
-		if ok {
+		if ok && v != nil {
 			m.value = v
 		} else {
 			m.value = result.OfError[R](ErrNoResult)
@@ -89,7 +88,7 @@ func (m *Memoizer[R]) Try() (R, error) {
 
 	select {
 	case v, ok := <-m.future:
-		if ok {
+		if ok && v != nil {
 			m.value = v
 		} else {
 			m.value = result.OfError[R](ErrNoResult)

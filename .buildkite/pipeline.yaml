@@ -4,19 +4,14 @@ steps:
     commands:
       - golangci-lint run --timeout 10m0s
 
-  - label: ':hammer: Test'
+  - label: ':hammer: Test (:codecov: + :codeclimate:)'
     commands:
-      - gotestsum --junitfile test.xml ./...
+      - gotestsum --junitfile test.xml -- -race -coverprofile=cover.out ./...
+      - sh .buildkite/upload_coverage.sh cover.out
     plugins:
-      - test-collector#v1.10.0:
+      - test-collector#v1.10.1:
           files: test.xml
           format: junit
     env:
       GOEXPERIMENT: rangefunc
 
-  - label: ':codecov: + :codeclimate: Coverage'
-    commands:
-      - go test -race -coverprofile=cover.out ./...
-      - sh .buildkite/upload_coverage.sh cover.out
-    env:
-      GOEXPERIMENT: rangefunc

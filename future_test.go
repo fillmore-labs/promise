@@ -112,7 +112,32 @@ func (s *FutureTestSuite) TestTry() {
 	s.ErrorIs(err3, promise.ErrNoResult)
 }
 
-func TestAsyncFuture(t *testing.T) {
+func (s *FutureTestSuite) TestNil() {
+	// given
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s.promise <- nil
+
+	// when
+	_, err := s.future.Await(ctx)
+
+	// then
+	s.ErrorIs(err, promise.ErrNoResult)
+}
+
+func (s *FutureTestSuite) TestTryNil() {
+	// given
+	s.promise <- nil
+
+	// when
+	_, err := s.future.Try()
+
+	// then
+	s.ErrorIs(err, promise.ErrNoResult)
+}
+
+func TestAsync(t *testing.T) {
 	t.Parallel()
 
 	// given

@@ -45,7 +45,7 @@ func NewAsync[R any](fn func() (R, error)) Future[R] {
 func (f Future[R]) Await(ctx context.Context) (R, error) {
 	select {
 	case r, ok := <-f:
-		if !ok {
+		if !ok || r == nil {
 			return *new(R), ErrNoResult
 		}
 
@@ -60,7 +60,7 @@ func (f Future[R]) Await(ctx context.Context) (R, error) {
 func (f Future[R]) Try() (R, error) {
 	select {
 	case r, ok := <-f:
-		if !ok {
+		if !ok || r == nil {
 			return *new(R), ErrNoResult
 		}
 

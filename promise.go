@@ -16,40 +16,42 @@
 
 package promise
 
-import "fillmore-labs.com/promise/result"
-
 // Promise is used to send the result of an asynchronous operation.
 //
-// It is a write-only promise.
+// It is a write-only channel.
 // Either [Promise.Resolve] or [Promise.Reject] should be called exactly once.
-type Promise[R any] chan<- result.Result[R]
+type Promise[R any] chan<- Result[R]
 
 // New provides a simple way to create a [Promise] for asynchronous operations.
 // This allows synchronous and asynchronous code to be composed seamlessly and separating initiation from running.
 //
 // The returned [Future] can be used to retrieve the eventual result of the [Promise].
 func New[R any]() (Promise[R], Future[R]) {
-	ch := make(chan result.Result[R], 1)
+	ch := make(chan Result[R], 1)
 
 	return ch, ch
 }
 
 // Resolve fulfills the promise with a value.
 func (p Promise[R]) Resolve(value R) {
-	p.complete(result.OfValue(value))
+	p.complete(Result[R]{Value: value})
 }
 
 // Reject breaks the promise with an error.
 func (p Promise[R]) Reject(err error) {
-	p.complete(result.OfError[R](err))
+	p.complete(Result[R]{Err: err})
 }
 
 // Do runs f synchronously, resolving the promise with the return value.
 func (p Promise[R]) Do(f func() (R, error)) {
-	p.complete(result.Of(f()))
+	p.complete(NewResult(f()))
 }
 
-func (p Promise[R]) complete(r result.Result[R]) {
+func (p Promise[R]) complete(r Result[R]) {
+	if p == nil {
+		return
+	}
+
 	p <- r
 	close(p)
 }

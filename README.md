@@ -7,7 +7,7 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/12a77c18122e2d1e1f6b/maintainability)](https://codeclimate.com/github/fillmore-labs/promise/maintainability)
 [![Go Report Card](https://goreportcard.com/badge/fillmore-labs.com/promise)](https://goreportcard.com/report/fillmore-labs.com/promise)
 [![License](https://img.shields.io/github/license/fillmore-labs/promise)](https://www.apache.org/licenses/LICENSE-2.0)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ffillmore-labs%2Fpromise.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Ffillmore-labs%2Fpromise?ref=badge_shield&issueType=license)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ffillmore-labs%2Fpromise.svg?type=shield&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Ffillmore-labs%2Fpromise)
 
 The `promise` package provides interfaces and utilities for writing asynchronous code in Go.
 
@@ -16,19 +16,18 @@ The `promise` package provides interfaces and utilities for writing asynchronous
 Promises and futures are constructs used for asynchronous and concurrent programming, allowing developers to work with
 values that may not be immediately available and can be evaluated in a different execution context.
 
-Go is known for its built-in concurrency features like goroutines and channels.
-The select statement further allows for efficient multiplexing and synchronization of multiple channels, thereby
-enabling developers to coordinate and orchestrate asynchronous operations effectively.
-Additionally, the context package offers a standardized way to manage cancellation, deadlines, and timeouts within
-concurrent and asynchronous code.
+Go is known for its built-in concurrency features like goroutines and channels. The select statement further allows for
+efficient multiplexing and synchronization of multiple channels, thereby enabling developers to coordinate and
+orchestrate asynchronous operations effectively. Additionally, the context package offers a standardized way to manage
+cancellation, deadlines, and timeouts within concurrent and asynchronous code.
 
 On the other hand, Go's error handling mechanism, based on explicit error values returned from functions, provides a
 clear and concise way to handle errors.
 
-The purpose of this package is to provide a library which simplifies the integration of concurrent
-code while providing a cohesive strategy for handling asynchronous errors.
-By adhering to Go's standard conventions for asynchronous and concurrent code, as well as error propagation, this
-package aims to enhance developer productivity and code reliability in scenarios requiring asynchronous operations.
+The purpose of this package is to provide a library which simplifies the integration of concurrent code while providing
+a cohesive strategy for handling asynchronous errors. By adhering to Go's standard conventions for asynchronous and
+concurrent code, as well as error propagation, this package aims to enhance developer productivity and code reliability
+in scenarios requiring asynchronous operations.
 
 ## Usage
 

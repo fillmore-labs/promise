@@ -19,22 +19,18 @@ package promise
 import (
 	"context"
 	"fmt"
-
-	"fillmore-labs.com/promise/result"
 )
 
 // A Memoizer is created with [Future.Memoize] and contains a memoized result of a future.
 type Memoizer[R any] struct {
 	_      noCopy
-	wait   chan struct{}
-	value  result.Result[R]
+	result Result[R]
 	future Future[R]
+	wait   chan struct{}
 }
 
-// Memoize returns a memoizer for the given future, consuming it in the process.
-//
-// The [Memoizer] can be queried multiple times from multiple goroutines.
-func (f Future[R]) Memoize() *Memoizer[R] {
+// NewMemoizer creates a new memoizer from a future.
+func NewMemoizer[R any](f <-chan Result[R]) *Memoizer[R] {
 	wait := make(chan struct{}, 1)
 	wait <- struct{}{}
 
@@ -49,23 +45,22 @@ func (m *Memoizer[R]) Await(ctx context.Context) (R, error) {
 	select {
 	case _, ok := <-m.wait:
 		if !ok {
-			return m.value.V()
+			return m.result.Value, m.result.Err
 		}
 
 	case <-ctx.Done():
 		return *new(R), fmt.Errorf("memoizer canceled: %w", context.Cause(ctx))
 	}
 
+	var ok bool
 	select {
-	case v, ok := <-m.future:
-		if ok && v != nil {
-			m.value = v
-		} else {
-			m.value = result.OfError[R](ErrNoResult)
+	case m.result, ok = <-m.future:
+		if !ok {
+			m.result.Err = ErrNoResult
 		}
 		close(m.wait)
 
-		return m.value.V()
+		return m.result.Value, m.result.Err
 
 	case <-ctx.Done():
 		m.wait <- struct{}{}
@@ -79,23 +74,22 @@ func (m *Memoizer[R]) Try() (R, error) {
 	select {
 	case _, ok := <-m.wait:
 		if !ok {
-			return m.value.V()
+			return m.result.Value, m.result.Err
 		}
 
 	default:
 		return *new(R), ErrNotReady
 	}
 
+	var ok bool
 	select {
-	case v, ok := <-m.future:
-		if ok && v != nil {
-			m.value = v
-		} else {
-			m.value = result.OfError[R](ErrNoResult)
+	case m.result, ok = <-m.future:
+		if !ok {
+			m.result.Err = ErrNoResult
 		}
 		close(m.wait)
 
-		return m.value.V()
+		return m.result.Value, m.result.Err
 
 	default:
 		m.wait <- struct{}{}

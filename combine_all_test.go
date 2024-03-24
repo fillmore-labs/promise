@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"fillmore-labs.com/promise"
-	"fillmore-labs.com/promise/result"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,20 +48,18 @@ func TestAll(t *testing.T) {
 	defer cancel()
 
 	// when
-	results := make([]result.Result[int], len(futures))
+	results := make([]promise.Result[int], len(futures))
 	for i, r := range promise.AwaitAll(ctx, futures...) { //nolint:typecheck
 		results[i] = r
 	}
 
 	// then
-	if assert.NoError(t, results[0].Err()) {
-		assert.Equal(t, 1, results[0].Value())
+	if assert.NoError(t, results[0].Err) {
+		assert.Equal(t, 1, results[0].Value)
 	}
-	if assert.ErrorIs(t, results[1].Err(), errTest) {
-		_ = results[1].Value() // Should not panic
-	}
-	if assert.NoError(t, results[2].Err()) {
-		assert.Equal(t, 2, results[2].Value())
+	assert.ErrorIs(t, results[1].Err, errTest)
+	if assert.NoError(t, results[2].Err) {
+		assert.Equal(t, 2, results[2].Value)
 	}
 }
 
@@ -99,21 +96,21 @@ func TestAnyAll(t *testing.T) {
 	p3.Resolve(struct{}{})
 
 	// when
-	results := make([]result.Result[any], 3)
+	results := make([]promise.Result[any], 3)
 	for i, r := range promise.AwaitAllAny(ctx, f1, f2, f3) { //nolint:typecheck
 		results[i] = r
 	}
 
 	// then
 	for i, r := range results {
-		if assert.NoError(t, r.Err()) {
+		if assert.NoError(t, r.Err) {
 			switch i {
 			case 0:
-				assert.Equal(t, 1, r.Value())
+				assert.Equal(t, 1, r.Value)
 			case 1:
-				assert.Equal(t, "test", r.Value())
+				assert.Equal(t, "test", r.Value)
 			case 2:
-				assert.Equal(t, struct{}{}, r.Value())
+				assert.Equal(t, struct{}{}, r.Value)
 			default:
 				assert.Fail(t, "unexpected index")
 			}

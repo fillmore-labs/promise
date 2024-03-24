@@ -20,15 +20,32 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-
-	"fillmore-labs.com/promise/result"
 )
+
+type Result[R any] struct {
+	Value R
+	Err   error
+}
+
+func NewResult[R any](value R, err error) Result[R] {
+	return Result[R]{
+		Value: value,
+		Err:   err,
+	}
+}
+
+func (r Result[R]) Any() Result[any] {
+	return Result[any]{
+		Value: r.Value,
+		Err:   r.Err,
+	}
+}
 
 // Future represents an asynchronous operation that will complete sometime in the future.
 //
 // It is a read-only channel that can be used with [Future.Await] to retrieve the final result of a
 // [Promise].
-type Future[R any] <-chan result.Result[R]
+type Future[R any] <-chan Result[R]
 
 // NewAsync runs fn asynchronously, immediately returning a [Future] that can be used to retrieve
 // the eventual result. This allows separating evaluating the result from computation.
@@ -45,11 +62,11 @@ func NewAsync[R any](fn func() (R, error)) Future[R] {
 func (f Future[R]) Await(ctx context.Context) (R, error) {
 	select {
 	case r, ok := <-f:
-		if !ok || r == nil {
+		if !ok {
 			return *new(R), ErrNoResult
 		}
 
-		return r.V()
+		return r.Value, r.Err
 
 	case <-ctx.Done():
 		return *new(R), fmt.Errorf("channel await: %w", context.Cause(ctx))
@@ -60,15 +77,22 @@ func (f Future[R]) Await(ctx context.Context) (R, error) {
 func (f Future[R]) Try() (R, error) {
 	select {
 	case r, ok := <-f:
-		if !ok || r == nil {
+		if !ok {
 			return *new(R), ErrNoResult
 		}
 
-		return r.V()
+		return r.Value, r.Err
 
 	default:
 		return *new(R), ErrNotReady
 	}
+}
+
+// Memoize returns a memoizer for the given future, consuming it in the process.
+//
+// The [Memoizer] can be queried multiple times from multiple goroutines.
+func (f Future[R]) Memoize() *Memoizer[R] {
+	return NewMemoizer(f)
 }
 
 func (f Future[_]) reflect() reflect.Value {

@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"fillmore-labs.com/promise"
-	"fillmore-labs.com/promise/result"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,9 +53,9 @@ func TestWaitAll(t *testing.T) {
 
 	// then
 	assert.Len(t, results, len(futures))
-	v0, err0 := results[0].V()
-	_, err1 := results[1].V()
-	_, err2 := results[2].V()
+	v0, err0 := results[0].Value, results[0].Err
+	err1 := results[1].Err
+	err2 := results[2].Err
 
 	if assert.NoError(t, err0) {
 		assert.Equal(t, 1, v0)
@@ -134,7 +133,7 @@ func TestCombineCancellation(t *testing.T) {
 		{name: "All", combine: func(futures []promise.Future[int], ctx context.Context) error {
 			r := promise.AwaitAllResults(ctx, futures...)
 
-			return r[0].Err()
+			return r[0].Err
 		}},
 		{name: "AllValues", combine: func(futures []promise.Future[int], ctx context.Context) error {
 			_, err := promise.AwaitAllValues(ctx, futures...)
@@ -181,7 +180,7 @@ func TestCombineMemoized(t *testing.T) {
 			return promise.AwaitAllResults(ctx, futures...), nil
 		}, expect: func(t *testing.T, actual any) {
 			t.Helper()
-			vv, ok := actual.([]result.Result[int])
+			vv, ok := actual.([]promise.Result[int])
 			if !ok {
 				assert.Fail(t, "Unexpected result type")
 
@@ -189,7 +188,7 @@ func TestCombineMemoized(t *testing.T) {
 			}
 
 			for _, v := range vv {
-				value, err := v.V()
+				value, err := v.Value, v.Err
 				if assert.NoError(t, err) {
 					assert.Equal(t, 3, value)
 				}
@@ -282,12 +281,12 @@ func TestAllAny(t *testing.T) {
 	p3, f3 := promise.New[struct{}]()
 
 	p1.Resolve(1)
-	p2.Resolve("test")
+	close(p2)
 	p3.Resolve(struct{}{})
 
 	// when
-	results := make([]result.Result[any], 3)
-	promise.AwaitAllAny(ctx, f1, f2, f3)(func(i int, r result.Result[any]) bool {
+	results := make([]promise.Result[any], 3)
+	promise.AwaitAllAny(ctx, f1, f2, f3)(func(i int, r promise.Result[any]) bool {
 		results[i] = r
 
 		return true
@@ -295,42 +294,19 @@ func TestAllAny(t *testing.T) {
 
 	// then
 	for i, r := range results {
-		if assert.NoError(t, r.Err()) {
-			switch i {
-			case 0:
-				assert.Equal(t, 1, r.Value())
-			case 1:
-				assert.Equal(t, "test", r.Value())
-			case 2:
-				assert.Equal(t, struct{}{}, r.Value())
-			default:
-				assert.Fail(t, "unexpected index")
+		switch i {
+		case 0:
+			if assert.NoError(t, r.Err) {
+				assert.Equal(t, 1, r.Value)
 			}
+		case 1:
+			assert.ErrorIs(t, r.Err, promise.ErrNoResult)
+		case 2:
+			if assert.NoError(t, r.Err) {
+				assert.Equal(t, struct{}{}, r.Value)
+			}
+		default:
+			assert.Fail(t, "unexpected index")
 		}
 	}
-}
-
-func TestAllNil(t *testing.T) {
-	// given
-	t.Parallel()
-	ctx := context.Background()
-
-	p1, f1 := promise.New[struct{}]()
-	p1 <- nil
-
-	// when
-	var v result.Result[any]
-	var set bool
-	promise.AwaitAllAny(ctx, f1)(func(_ int, r result.Result[any]) bool {
-		if set {
-			assert.Fail(t, "Value already set")
-		}
-		v = r
-		set = true
-
-		return false
-	})
-
-	// then
-	assert.ErrorIs(t, v.Err(), promise.ErrNoResult)
 }

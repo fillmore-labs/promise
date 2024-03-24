@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"fillmore-labs.com/promise"
-	"fillmore-labs.com/promise/result"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -88,13 +87,13 @@ func TestMemoizerMany(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	results := make([]result.Result[int], iterations)
+	results := make([]promise.Result[int], iterations)
 	var wg sync.WaitGroup
 	for i := 0; i < iterations; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			results[i] = result.Of(m.Await(ctx))
+			results[i] = promise.NewResult(m.Await(ctx))
 		}(i)
 	}
 
@@ -103,8 +102,8 @@ func TestMemoizerMany(t *testing.T) {
 
 	// then
 	for i := 0; i < iterations; i++ {
-		if assert.NoError(t, results[i].Err()) {
-			assert.Equal(t, 1, results[i].Value())
+		if assert.NoError(t, results[i].Err) {
+			assert.Equal(t, 1, results[i].Value)
 		}
 	}
 }
@@ -166,26 +165,6 @@ func TestMemoizerTryClosed(t *testing.T) {
 	// given
 	p, f := promise.New[int]()
 	close(p)
-
-	m := f.Memoize()
-
-	ctx := context.Background()
-
-	// when
-	_, err1 := m.Try()
-	_, err2 := m.Await(ctx)
-
-	// then
-	assert.ErrorIs(t, err1, promise.ErrNoResult)
-	assert.ErrorIs(t, err2, promise.ErrNoResult)
-}
-
-func TestMemoizerNil(t *testing.T) {
-	t.Parallel()
-
-	// given
-	p, f := promise.New[int]()
-	p <- nil
 
 	m := f.Memoize()
 

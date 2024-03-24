@@ -6,8 +6,9 @@
 !/.github/
 !/.gitignore
 !/.golangci.yaml
-!/.markdownlint.json
+!/.markdownlint.yaml
 !/.mockery.yaml
+!/.prettierrc.yaml
 !/.yamlfmt
 !/.yamllint
 /bin/

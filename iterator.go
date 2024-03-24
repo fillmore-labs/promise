@@ -21,22 +21,20 @@ import (
 	"fmt"
 	"reflect"
 	"runtime/trace"
-
-	"fillmore-labs.com/promise/result"
 )
 
 // This iterator is used to combine the results of multiple asynchronous operations waiting in parallel.
 type iterator[R any] struct {
 	_            noCopy
-	numFutures   int
-	cases        []reflect.SelectCase
-	convertValue func(recv reflect.Value, ok bool) result.Result[R]
 	ctx          context.Context //nolint:containedctx
+	convertValue func(recv reflect.Value, ok bool) Result[R]
+	cases        []reflect.SelectCase
+	numFutures   int
 }
 
 func newIterator[R any, F AnyFuture](
-	ctx context.Context, convertValue func(recv reflect.Value, ok bool) result.Result[R], l []F,
-) iterator[R] {
+	ctx context.Context, convertValue func(recv reflect.Value, ok bool) Result[R], l []F,
+) func(yield func(int, Result[R]) bool) {
 	numFutures := len(l)
 	cases := make([]reflect.SelectCase, numFutures+1)
 	for idx, future := range l {
@@ -50,15 +48,17 @@ func newIterator[R any, F AnyFuture](
 		Chan: reflect.ValueOf(ctx.Done()),
 	}
 
-	return iterator[R]{
+	i := iterator[R]{
 		numFutures:   numFutures,
 		cases:        cases,
 		convertValue: convertValue,
 		ctx:          ctx,
 	}
+
+	return i.yieldTo
 }
 
-func (i *iterator[R]) yieldTo(yield func(int, result.Result[R]) bool) {
+func (i *iterator[R]) yieldTo(yield func(int, Result[R]) bool) {
 	defer trace.StartRegion(i.ctx, "promiseSeq").End()
 	for run := 0; run < i.numFutures; run++ {
 		chosen, recv, ok := reflect.Select(i.cases)
@@ -78,28 +78,28 @@ func (i *iterator[R]) yieldTo(yield func(int, result.Result[R]) bool) {
 	}
 }
 
-func convertValue[R any](recv reflect.Value, ok bool) result.Result[R] {
+func convertValue[R any](recv reflect.Value, ok bool) Result[R] {
 	if ok {
-		if r, ok2 := recv.Interface().(result.Result[R]); ok2 {
+		if r, ok2 := recv.Interface().(Result[R]); ok2 {
 			return r
 		}
 	}
 
-	return result.OfError[R](ErrNoResult)
+	return Result[R]{Err: ErrNoResult}
 }
 
-func convertValueAny(recv reflect.Value, ok bool) result.Result[any] {
+func convertValueAny(recv reflect.Value, ok bool) Result[any] {
 	if ok {
-		if a, ok2 := recv.Interface().(result.AnyResult); ok2 {
+		if a, ok2 := recv.Interface().(interface{ Any() Result[any] }); ok2 {
 			return a.Any()
 		}
 	}
 
-	return result.OfError[any](ErrNoResult)
+	return Result[any]{Err: ErrNoResult}
 }
 
-func (i *iterator[R]) yieldErr(yield func(int, result.Result[R]) bool, err error) {
-	e := result.OfError[R](err)
+func (i *iterator[R]) yieldErr(yield func(int, Result[R]) bool, err error) {
+	e := Result[R]{Err: err}
 	for idx := 0; idx < i.numFutures; idx++ {
 		if i.cases[idx].Chan.IsValid() && !yield(idx, e) {
 			break
